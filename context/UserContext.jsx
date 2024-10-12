@@ -59,7 +59,8 @@ function UserContextProvider({ children }) {
         const newActivities = state.activities.filter(
           (activity) => activity.id !== action.payload
         );
-        return { ...state, activities: [...newActivities] };
+        return { ...state,users: [...newUsers] , selectedUser: {...state.selectedUser},
+        activities: [...newActivities] };
       }
 
       case "REMOVE": {
@@ -70,7 +71,8 @@ function UserContextProvider({ children }) {
         const newUsers = state.users.filter(
           (user) => user.id !== action.payload.id
         );
-        return { ...state, users: [...newUsers] };
+        return { ...state, users: [...newUsers] , selectedUser: {...state.selectedUser},
+        activities: [state.activities]};
       }
       case "UPDATE": {
         fetch(`${baseUrl}/users/${action.payload.id}`, {
