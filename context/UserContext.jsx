@@ -59,7 +59,7 @@ function UserContextProvider({ children }) {
         const newActivities = state.activities.filter(
           (activity) => activity.id !== action.payload
         );
-        return { ...state,users: [...newUsers] , selectedUser: {...state.selectedUser},
+        return { ...state,users: [...state.users] , selectedUser: {...state.selectedUser},
         activities: [...newActivities] };
       }
 
