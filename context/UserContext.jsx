@@ -1,13 +1,15 @@
 import { createContext, useEffect, useReducer } from "react";
+import checkUserInList from "../src/helpers/checkUserInList";
+
 const initialState = {
   users: [],
   selectedUser: {},
   activities: [],
 };
-export const UserContext = createContext();
-const baseUrl = import.meta.env.VITE_BASE_URL;  
-function UserContextProvider({ children }) {
 
+export const UserContext = createContext();
+
+function UserContextProvider({ children }) {
   function userReducer(state, action) {
     switch (action.type) {
       case "FIRSTLOAD": {
@@ -19,72 +21,46 @@ function UserContextProvider({ children }) {
         };
       }
       case "ADD": {
-        fetch(`${baseUrl}/users`, {
-          method: "POST",
-          body: JSON.stringify({ ...action.payload }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        return { ...state, users: [...state.users, action.payload] };
+        const isInList=checkUserInList(action.payload.mellicode);
+        if(isInList){
+          alert(`یک کاربر با کد ملی "${action.payload.mellicode}" قبلاً ثبت شده است.`);  
+        return state;
+
+        }
+        const updatedUsers = [...state.users, action.payload];
+        localStorage.setItem("users", JSON.stringify(updatedUsers));
+        return { ...state, users: updatedUsers };
       }
       case "ADD_ACTIVITIES": {
-        fetch(`${baseUrl}/activities`, {
-          method: "POST",
-          body: JSON.stringify({ ...action.payload }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        const updatedActivities = [...state.activities, action.payload];
+        localStorage.setItem("activities", JSON.stringify(updatedActivities));
         return {
           ...state,
-          users: [...state.users],
-          activities: [...state.activities, { ...action.payload }],
+          activities: updatedActivities,
         };
       }
 
       case "DELETE_ACTIVITY": {
-        try {
-           fetch(
-          `${baseUrl}/activities/${action.payload}`,
-          {
-            method: "DELETE",
-          }
-        )
-        } catch (error) {
-          throw new Error("error in removing activity")
-        }
-      
-    
         const newActivities = state.activities.filter(
           (activity) => activity.id !== action.payload
         );
-        return { ...state,users: [...state.users] , selectedUser: {...state.selectedUser},
-        activities: [...newActivities] };
+        localStorage.setItem("activities", JSON.stringify(newActivities));
+        return { ...state, activities: newActivities };
       }
 
       case "REMOVE": {
-        fetch(`${baseUrl}/users/${action.payload.id}`, {
-          method: "DELETE",
-        })
-         
         const newUsers = state.users.filter(
           (user) => user.id !== action.payload.id
         );
-        return { ...state, users: [...newUsers] , selectedUser: {...state.selectedUser},
-        activities: [state.activities]};
+        localStorage.setItem("users", JSON.stringify(newUsers));
+        return { ...state, users: newUsers };
       }
       case "UPDATE": {
-        fetch(`${baseUrl}/users/${action.payload.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ ...action.payload, id: action.payload.id }),
-          headers: { "Content-Type": "application/json" },
-        });
-        const newUsers = state.users.filter(
-          (user) => user.id !== action.payload.id
+        const newUsers = state.users.map((user) =>
+          user.id === action.payload.id ? action.payload : user
         );
-        newUsers.push(action.payload);
-        return { ...state, users: [...newUsers] };
+        localStorage.setItem("users", JSON.stringify(newUsers));
+        return { ...state, users: newUsers };
       }
       case "SELECT_USER": {
         return {
@@ -95,28 +71,18 @@ function UserContextProvider({ children }) {
           },
         };
       }
+      default: {
+        return state;
+      }
     }
   }
+
   const [state, dispatch] = useReducer(userReducer, initialState);
 
   useEffect(() => {
-try {
-   Promise.all([  
-      fetch(`${baseUrl}/users`),  
-      fetch(`${baseUrl}/activities`)  
-    ]).then(responses => {  
-      return Promise.all([  
-        responses[0].json(),  
-        responses[1].json()  
-      ]);  
-    }).then(data => {  
-      dispatch({type:'FIRSTLOAD',payload:{users:[...data[0]],activities:[...data[1]]}})
-    }) 
-} catch (error) {
-  throw new Error("error in fetching data")
-}
-   
-
+    const users = JSON.parse(localStorage.getItem("users")) || [];
+    const activities = JSON.parse(localStorage.getItem("activities")) || [];
+    dispatch({ type: "FIRSTLOAD", payload: { users, activities } });
   }, []);
 
   return (
